@@ -2,10 +2,10 @@ use axum::{
     extract::ConnectInfo,
     routing::get,
     Router,
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
 };
 use std::net::SocketAddr;
-use tracing::{info, instrument};
+use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -20,7 +20,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(default_handler))
-        .route("/livez", get(livez_handler));
+        .route("/health", get(health_handler));
 
     let port = std::env::var("PORT")
         .unwrap_or_else(|_| "3000".to_string())
@@ -44,7 +44,7 @@ async fn default_handler(
     client_ip.to_string()
 }
 
-async fn livez_handler() -> String {
+async fn health_handler() -> String {
     "Healthy".to_string()
 }
 
