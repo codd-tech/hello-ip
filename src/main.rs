@@ -1,9 +1,4 @@
-use axum::{
-    extract::ConnectInfo,
-    routing::get,
-    Router,
-    http::HeaderMap,
-};
+use axum::{Router, extract::ConnectInfo, http::HeaderMap, routing::get};
 use std::net::SocketAddr;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -27,18 +22,19 @@ async fn main() {
         .parse::<u16>()
         .expect("PORT must be a valid number");
 
-
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     info!("Server starting on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await.unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }
 
-async fn default_handler(
-    headers: HeaderMap,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
-) -> String {
+async fn default_handler(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> String {
     let client_ip = extract_client_ip(&headers, addr.ip());
     info!("Request from {}, resolved IP: {}", addr.ip(), client_ip);
     client_ip.to_string()
@@ -49,38 +45,30 @@ async fn health_handler() -> String {
 }
 
 fn extract_client_ip(headers: &HeaderMap, fallback_ip: std::net::IpAddr) -> std::net::IpAddr {
-    if let Some(xff) = headers.get("x-forwarded-for") {
-        if let Ok(xff_str) = xff.to_str() {
-            if let Some(first_ip) = xff_str.split(',').next() {
-                if let Ok(ip) = first_ip.trim().parse() {
+    if let Some(xff) = headers.get("x-forwarded-for")
+        && let Ok(xff_str) = xff.to_str()
+            && let Some(first_ip) = xff_str.split(',').next()
+                && let Ok(ip) = first_ip.trim().parse() {
                     return ip;
                 }
-            }
-        }
-    }
-    
-    if let Some(xri) = headers.get("x-real-ip") {
-        if let Ok(xri_str) = xri.to_str() {
-            if let Ok(ip) = xri_str.parse() {
+
+    if let Some(xri) = headers.get("x-real-ip")
+        && let Ok(xri_str) = xri.to_str()
+            && let Ok(ip) = xri_str.parse() {
                 return ip;
             }
-        }
-    }
-    
-    if let Some(xci) = headers.get("x-client-ip") {
-        if let Ok(xci_str) = xci.to_str() {
-            if let Ok(ip) = xci_str.parse() {
+
+    if let Some(xci) = headers.get("x-client-ip")
+        && let Ok(xci_str) = xci.to_str()
+            && let Ok(ip) = xci_str.parse() {
                 return ip;
             }
-        }
-    }
-    
-    if let Some(forwarded) = headers.get("forwarded") {
-        if let Ok(forwarded_str) = forwarded.to_str() {
+
+    if let Some(forwarded) = headers.get("forwarded")
+        && let Ok(forwarded_str) = forwarded.to_str() {
             for part in forwarded_str.split(';') {
                 let part = part.trim();
-                if part.starts_with("for=") {
-                    let ip_part = &part[4..];
+                if let Some(ip_part) = part.strip_prefix("for=") {
                     let ip_str = ip_part
                         .trim_matches('"')
                         .split(':')
@@ -88,14 +76,13 @@ fn extract_client_ip(headers: &HeaderMap, fallback_ip: std::net::IpAddr) -> std:
                         .unwrap_or(ip_part)
                         .trim_matches('[')
                         .trim_matches(']');
-                    
+
                     if let Ok(ip) = ip_str.parse() {
                         return ip;
                     }
                 }
             }
         }
-    }
-    
+
     fallback_ip
 }
