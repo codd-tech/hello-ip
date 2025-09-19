@@ -47,42 +47,46 @@ async fn health_handler() -> String {
 fn extract_client_ip(headers: &HeaderMap, fallback_ip: std::net::IpAddr) -> std::net::IpAddr {
     if let Some(xff) = headers.get("x-forwarded-for")
         && let Ok(xff_str) = xff.to_str()
-            && let Some(first_ip) = xff_str.split(',').next()
-                && let Ok(ip) = first_ip.trim().parse() {
-                    return ip;
-                }
+        && let Some(first_ip) = xff_str.split(',').next()
+        && let Ok(ip) = first_ip.trim().parse()
+    {
+        return ip;
+    }
 
     if let Some(xri) = headers.get("x-real-ip")
         && let Ok(xri_str) = xri.to_str()
-            && let Ok(ip) = xri_str.parse() {
-                return ip;
-            }
+        && let Ok(ip) = xri_str.parse()
+    {
+        return ip;
+    }
 
     if let Some(xci) = headers.get("x-client-ip")
         && let Ok(xci_str) = xci.to_str()
-            && let Ok(ip) = xci_str.parse() {
-                return ip;
-            }
+        && let Ok(ip) = xci_str.parse()
+    {
+        return ip;
+    }
 
     if let Some(forwarded) = headers.get("forwarded")
-        && let Ok(forwarded_str) = forwarded.to_str() {
-            for part in forwarded_str.split(';') {
-                let part = part.trim();
-                if let Some(ip_part) = part.strip_prefix("for=") {
-                    let ip_str = ip_part
-                        .trim_matches('"')
-                        .split(':')
-                        .next()
-                        .unwrap_or(ip_part)
-                        .trim_matches('[')
-                        .trim_matches(']');
+        && let Ok(forwarded_str) = forwarded.to_str()
+    {
+        for part in forwarded_str.split(';') {
+            let part = part.trim();
+            if let Some(ip_part) = part.strip_prefix("for=") {
+                let ip_str = ip_part
+                    .trim_matches('"')
+                    .split(':')
+                    .next()
+                    .unwrap_or(ip_part)
+                    .trim_matches('[')
+                    .trim_matches(']');
 
-                    if let Ok(ip) = ip_str.parse() {
-                        return ip;
-                    }
+                if let Ok(ip) = ip_str.parse() {
+                    return ip;
                 }
             }
         }
+    }
 
     fallback_ip
 }
